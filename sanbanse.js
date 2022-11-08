@@ -44,7 +44,9 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
       await (await page.$x(`//a[text() = "ふなばし三番瀬海浜公園"]`))[0].click();
       await page.waitForFunction(()=> document.readyState === "complete");  
       
+      //今月分
       //月-金を削除
+      await page.$$eval('th',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
@@ -53,27 +55,62 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
       //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
       //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
       
-      //aki syutoku syori
-      var akiarray = await akisyutoku(page)
-    
-      await page.click('img[alt="次の月"]');
-      await page.waitForFunction(()=> document.readyState === "complete");  
-      //aki syutoku syori
-      akiarray = akiarray.concat(await akisyutoku(page));
-      if(akiarray.length){
+      const tabledata = await page.evaluate(() => document.querySelector('table[class="m_akitablelist"]').outerHTML)
+      const tabledata_json = tabletojson.convert(tabledata,{stripHtmlFromCells:false})
+      tabledata_json[0].shift() //次の月ボタンがある行のデータ部削除
+      // ハイフン表示の日分を削除
+      tabledata_json[0].filter(item=>{
+        if(item["0"] == "&nbsp;"){
+          delete item["0"]
+        }
+        if(item["1"] == "&nbsp;"){
+          delete item["1"]
+        }
+      })
+      console.log("tabledata_json -> " + JSON.stringify(tabledata_json,null,2))
+      // 空いてない日分を削除
+      tabledata_json[0].filter(item=>{
+        //一部空き
+        //全て空き
+        //予約あり
+        if(!item["0"]?.match("一部空き") && !item["0"]?.match("全て空き")){
+          delete item["0"]
+        }
+        if(!item["1"]?.match("一部空き") && !item["1"]?.match("全て空き")){
+          delete item["1"]
+        }
+      })
+      // delete によってできた空のオブジェクトを削除
+      tabledata_json[0] = tabledata_json[0].filter(item => Object.keys(item).length !== 0)
+      const year = await page.$eval('input[name="dispYY"]',el => el.value)
+      const month = await page.$eval('input[name="dispMM"]',el => el.value)
+      console.log("year -> " + year)
+      console.log("month -> " + month)
+      console.log("tabledata_json -> " + JSON.stringify(tabledata_json,null,2))
+
+      // 日付,予約状況の配列作成
+      availableList = []
+      tabledata_json[0].forEach(item => {
+        if(item["0"]){availableList.push(year + "/" + month + "/" + item["0"].replace(/.*([0-9]{2})日.*/,"$1"))}
+        if(item["1"]){availableList.push(year + "/" + month + "/" + item["1"].replace(/.*([0-9]{2})日.*/,"$1"))}
+      })
+      console.log("availableList -> " + availableList)
+      
+
+      if(availableList.length){
         if(fs.existsSync("/tmp/sanbanse-court-previous.txt")){
           const previous = fs.readFileSync("/tmp/sanbanse-court-previous.txt","UTF-8")
-          if(previous != JSON.stringify(akiarray)){
+          if(previous != JSON.stringify(availableList)){
             const myLine = new Line();
             myLine.setToken(lineNotifyToken);
-            myLine.notify(JSON.stringify(akiarray).toString());
-            fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(akiarray))
+            myLine.notify(JSON.stringify(availableList).toString());
+            fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(availableList))
           }
 	} else {
           const myLine = new Line();
           myLine.setToken(lineNotifyToken);
-          myLine.notify(JSON.stringify(akiarray).toString());
-          fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(akiarray))
+          myLine.notify(JSON.stringify(availableList).toString());
+          fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(availableList))
 	}
       }
       
@@ -86,62 +123,6 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
     }
   }
 })();
-
-const akisyutoku = async function(page){
-  //aki syutoku syori
-  const tabledata = await page.evaluate(() => document.querySelector('table[class="m_akitablelist"]').outerHTML)
-  const tabledata_json = tabletojson.convert(tabledata,{stripHtmlFromCells:false})
-  const yearmonth = cheerio.load(tabledata_json[0][0]["日曜日"]).text()
-  console.log(yearmonth)
-  tabledata_json[0].shift();
-  console.log("nengetu syutoku -------------")
-  const data = tabledata_json[0].filter(item=>!!item).filter((item)=>{
-    delete item["月曜日"]
-    delete item["火曜日"]
-    delete item["水曜日"]
-    delete item["木曜日"]
-    delete item["金曜日"]
-    return item
-  })
-  console.log("doniti igai sakujo -------------")
-  data.filter(item=>{
-    if(item["土曜日"] == "&nbsp;"){
-      delete item["土曜日"]
-    }
-    if(item["日曜日"] == "&nbsp;"){
-      delete item["日曜日"]
-    }
-  })
-  console.log(data)
-  const akilist = [];
-  console.log("hiduke nasi sakujo -------------")
-  data.forEach(item=>{
-    //一部空き
-    //全て空き
-    //予約あり
-    //if(item["日曜日"]?.toString().match(/.*予約あり.*/)){
-    //  akilist.push(item["日曜日"])
-    //}
-    //if(item["土曜日"]?.toString().match(/.*予約あり.*/)){
-    //  akilist.push(item["土曜日"])
-    //}
-    if(item["日曜日"]?.toString().match(/.*一部空き.*/)){
-      akilist.push(item["日曜日"])
-    }
-    if(item["土曜日"]?.toString().match(/.*一部空き.*/)){
-      akilist.push(item["土曜日"])
-    }
-  })
-  console.log("akinomi syutoku -------------")
-  var akihidukelist = [];
-  akilist.forEach(item=>{
-    console.log("item->" + item)
-    console.log("hiduke syutoku -------------")
-    akihidukelist.push(yearmonth +  cheerio.load(item).text())
-  })
-  
-  return akihidukelist
-}
 
 const Line = function () {};
 
