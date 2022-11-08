@@ -44,6 +44,15 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
       await (await page.$x(`//a[text() = "ふなばし三番瀬海浜公園"]`))[0].click();
       await page.waitForFunction(()=> document.readyState === "complete");  
       
+      //月-金を削除
+      await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+      
       //aki syutoku syori
       var akiarray = await akisyutoku(page)
     
