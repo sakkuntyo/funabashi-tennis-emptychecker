@@ -17,6 +17,9 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
     });
     try{
       const page = await browser.newPage();
+      page.on('dialog',async dialog => {
+        dialog.accept();
+      })
       await page.goto('https://funayoyaku.city.funabashi.chiba.jp/web/index.jsp');
       await page.waitForFunction(()=> document.readyState === "complete");  
     
@@ -47,6 +50,7 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
       //今月分
       //月-金を削除
       await page.$$eval('th',els => els.forEach(el => el.remove()));
+      await page.$$eval('table[class="tcontent"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
@@ -54,66 +58,91 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
       await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
       //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
       //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
-      
-      const tabledata = await page.evaluate(() => document.querySelector('table[class="m_akitablelist"]').outerHTML)
-      const tabledata_json = tabletojson.convert(tabledata,{stripHtmlFromCells:false})
-      tabledata_json[0].shift() //次の月ボタンがある行のデータ部削除
-      // ハイフン表示の日分を削除
-      tabledata_json[0].filter(item=>{
-        if(item["0"] == "&nbsp;"){
-          delete item["0"]
-        }
-        if(item["1"] == "&nbsp;"){
-          delete item["1"]
-        }
-      })
-      console.log("tabledata_json -> " + JSON.stringify(tabledata_json,null,2))
-      // 空いてない日分を削除
-      tabledata_json[0].filter(item=>{
-        //一部空き
-        //全て空き
-        //予約あり
-        if(!item["0"]?.match("一部空き") && !item["0"]?.match("全て空き")){
-          delete item["0"]
-        }
-        if(!item["1"]?.match("一部空き") && !item["1"]?.match("全て空き")){
-          delete item["1"]
-        }
-      })
-      // delete によってできた空のオブジェクトを削除
-      tabledata_json[0] = tabledata_json[0].filter(item => Object.keys(item).length !== 0)
-      const year = await page.$eval('input[name="dispYY"]',el => el.value)
-      const month = await page.$eval('input[name="dispMM"]',el => el.value)
-      console.log("year -> " + year)
-      console.log("month -> " + month)
-      console.log("tabledata_json -> " + JSON.stringify(tabledata_json,null,2))
+      const myLine = new Line();
 
-      // 日付,予約状況の配列作成
-      availableList = []
-      tabledata_json[0].forEach(item => {
-        if(item["0"]){availableList.push(year + "/" + month + "/" + item["0"].replace(/.*([0-9]{2})日.*/,"$1"))}
-        if(item["1"]){availableList.push(year + "/" + month + "/" + item["1"].replace(/.*([0-9]{2})日.*/,"$1"))}
-      })
-      console.log("availableList -> " + availableList)
-      
-
-      if(availableList.length){
-        if(fs.existsSync("/tmp/sanbanse-court-previous.txt")){
-          const previous = fs.readFileSync("/tmp/sanbanse-court-previous.txt","UTF-8")
-          if(previous != JSON.stringify(availableList)){
+      //空きがあればそのまま予約
+      if (await page.$('img[src="image/bw_cal100.gif"]') !== null){
+        await page.click('img[src="image/bw_cal100.gif"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="空き"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[src="image/bw_watch.gif"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="申込み"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('input[value="1"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="確認"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
+        akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+        console.log("akijikan -> " + akijikan)
+        console.log("akidate -> " + akidate)
+        //選択している日にち - 現在の日にちの日数差分
+        dayPeriod = Math.floor((new Date(akidate) - new Date()) / (1000 * 60 * 60 * 24))
+        //空き予定との間隔が4以上なら予約を進める
+        if(dayPeriod >= 4){
+          await page.type('input[name="applyNum"]',"4");
+          await page.click('img[alt="申込み"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          myLine.setToken(lineNotifyToken);
+          myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+        }
+        else {
+          console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
+        }
+      } else {
+        //来月分
+        await page.click('img[alt="次の月"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        //月-金を削除
+        await page.$$eval('th',els => els.forEach(el => el.remove()));
+        await page.$$eval('table[class="tcontent"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+        //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
+        //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+        year = await page.$eval('input[name="dispYY"]',el => el.value)
+        month = await page.$eval('input[name="dispMM"]',el => el.value)
+  
+        //空きがあればそのまま予約
+        if (await page.$('img[src="image/bw_cal100.gif"]') !== null){
+          await page.click('img[src="image/bw_cal100.gif"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="空き"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[src="image/bw_watch.gif"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="申込み"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('input[value="1"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="確認"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
+          akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+          console.log("akijikan -> " + akijikan)
+          console.log("akidate -> " + akidate)
+          //選択している日にち - 現在の日にちの日数差分
+          dayPeriod = Math.floor((new Date(akidate) - new Date()) / (1000 * 60 * 60 * 24))
+          //空き予定との間隔が4以上なら予約を進める
+          if(dayPeriod >= 4){
+            await page.type('input[name="applyNum"]',4);
+            await page.click('img[alt="申込み"]');
+            await page.waitForFunction(()=> document.readyState === "complete");  
             const myLine = new Line();
             myLine.setToken(lineNotifyToken);
-            myLine.notify(JSON.stringify(availableList).toString());
-            fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(availableList))
+            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
           }
-	} else {
-          const myLine = new Line();
-          myLine.setToken(lineNotifyToken);
-          myLine.notify(JSON.stringify(availableList).toString());
-          fs.writeFileSync("/tmp/sanbanse-court-previous.txt", JSON.stringify(availableList))
-	}
+          else {
+            console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
+          }
+        }
       }
-      
+
       await browser.close();
       await setTimeout(60000);
     } catch(error) {
