@@ -17,6 +17,9 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).n
     });
     try{
       const page = await browser.newPage();
+      page.on('dialog',async dialog => {
+        dialog.accept();
+      })
       await page.goto('https://funayoyaku.city.funabashi.chiba.jp/web/index.jsp');
       await page.waitForFunction(()=> document.readyState === "complete");  
     
@@ -42,32 +45,104 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).n
       await page.waitForFunction(()=> document.readyState === "complete");  
     
       await (await page.$x(`//a[text() = "運動公園"]`))[0].click();
-      await page.waitForFunction(()=> document.readyState === "complete");
-      
-      //aki syutoku syori
-      var akiarray = await akisyutoku(page)
-    
-      await page.click('img[alt="次の月"]');
       await page.waitForFunction(()=> document.readyState === "complete");  
-      //aki syutoku syori
-      akiarray = akiarray.concat(await akisyutoku(page));
-      if(akiarray.length){
-        if(fs.existsSync("/tmp/natsumi-court-previous.txt")){
-          const previous = fs.readFileSync("/tmp/natsumi-court-previous.txt","UTF-8")
-          if(previous != JSON.stringify(akiarray)){
+      
+      //今月分
+      //月-金を削除
+      await page.$$eval('th',els => els.forEach(el => el.remove()));
+      await page.$$eval('table[class="tcontent"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+      const myLine = new Line();
+
+      //空きがあればそのまま予約
+      if (await page.$('img[src="image/bw_cal100.gif"]') !== null){
+        await page.click('img[src="image/bw_cal100.gif"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="空き"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[src="image/bw_watch.gif"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="申込み"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('input[value="1"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        await page.click('img[alt="確認"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
+        akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+        console.log("akijikan -> " + akijikan)
+        console.log("akidate -> " + akidate)
+        //選択している日にち - 現在の日にちの日数差分
+        dayPeriod = Math.floor((new Date(akidate) - new Date()) / (1000 * 60 * 60 * 24))
+        //空き予定との間隔が4以上なら予約を進める
+        if(dayPeriod >= 4){
+          await page.type('input[name="applyNum"]',"4");
+          await page.click('img[alt="申込み"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          myLine.setToken(lineNotifyToken);
+          myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+        }
+        else {
+          console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
+        }
+      } else {
+        //来月分
+        await page.click('img[alt="次の月"]');
+        await page.waitForFunction(()=> document.readyState === "complete");  
+        //月-金を削除
+        await page.$$eval('th',els => els.forEach(el => el.remove()));
+        await page.$$eval('table[class="tcontent"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_mon"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
+        await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+        //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
+        //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+        year = await page.$eval('input[name="dispYY"]',el => el.value)
+        month = await page.$eval('input[name="dispMM"]',el => el.value)
+  
+        //空きがあればそのまま予約
+        if (await page.$('img[src="image/bw_cal100.gif"]') !== null){
+          await page.click('img[src="image/bw_cal100.gif"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="空き"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[src="image/bw_watch.gif"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="申込み"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('input[value="1"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          await page.click('img[alt="確認"]');
+          await page.waitForFunction(()=> document.readyState === "complete");  
+          akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
+          akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+          console.log("akijikan -> " + akijikan)
+          console.log("akidate -> " + akidate)
+          //選択している日にち - 現在の日にちの日数差分
+          dayPeriod = Math.floor((new Date(akidate) - new Date()) / (1000 * 60 * 60 * 24))
+          //空き予定との間隔が4以上なら予約を進める
+          if(dayPeriod >= 4){
+            await page.type('input[name="applyNum"]',4);
+            await page.click('img[alt="申込み"]');
+            await page.waitForFunction(()=> document.readyState === "complete");  
             const myLine = new Line();
             myLine.setToken(lineNotifyToken);
-            myLine.notify(JSON.stringify(akiarray).toString());
-            fs.writeFileSync("/tmp/natsumi-court-previous.txt", JSON.stringify(akiarray))
+            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
           }
-	} else {
-          const myLine = new Line();
-          myLine.setToken(lineNotifyToken);
-          myLine.notify(JSON.stringify(akiarray).toString());
-          fs.writeFileSync("/tmp/natsumi-court-previous.txt", JSON.stringify(akiarray))
-	}
+          else {
+            console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
+          }
+        }
       }
-      
+
       await browser.close();
       await setTimeout(60000);
     } catch(error) {
@@ -77,62 +152,6 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).n
     }
   }
 })();
-
-const akisyutoku = async function(page){
-  //aki syutoku syori
-  const tabledata = await page.evaluate(() => document.querySelector('table[class="m_akitablelist"]').outerHTML)
-  const tabledata_json = tabletojson.convert(tabledata,{stripHtmlFromCells:false})
-  const yearmonth = cheerio.load(tabledata_json[0][0]["日曜日"]).text()
-  console.log(yearmonth)
-  tabledata_json[0].shift();
-  console.log("nengetu syutoku -------------")
-  const data = tabledata_json[0].filter(item=>!!item).filter((item)=>{
-    delete item["月曜日"]
-    delete item["火曜日"]
-    delete item["水曜日"]
-    delete item["木曜日"]
-    delete item["金曜日"]
-    return item
-  })
-  console.log("doniti igai sakujo -------------")
-  data.filter(item=>{
-    if(item["土曜日"] == "&nbsp;"){
-      delete item["土曜日"]
-    }
-    if(item["日曜日"] == "&nbsp;"){
-      delete item["日曜日"]
-    }
-  })
-  console.log(data)
-  const akilist = [];
-  console.log("hiduke nasi sakujo -------------")
-  data.forEach(item=>{
-    //一部空き
-    //全て空き
-    //予約あり
-    //if(item["日曜日"]?.toString().match(/.*予約あり.*/)){
-    //  akilist.push(item["日曜日"])
-    //}
-    //if(item["土曜日"]?.toString().match(/.*予約あり.*/)){
-    //  akilist.push(item["土曜日"])
-    //}
-    if(item["日曜日"]?.toString().match(/.*一部空き.*/)){
-      akilist.push(item["日曜日"])
-    }
-    if(item["土曜日"]?.toString().match(/.*一部空き.*/)){
-      akilist.push(item["土曜日"])
-    }
-  })
-  console.log("akinomi syutoku -------------")
-  var akihidukelist = [];
-  akilist.forEach(item=>{
-    console.log("item->" + item)
-    console.log("hiduke syutoku -------------")
-    akihidukelist.push(yearmonth +  cheerio.load(item).text())
-  })
-  
-  return akihidukelist
-}
 
 const Line = function () {};
 
