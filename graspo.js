@@ -86,7 +86,7 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).g
           await page.click('img[alt="申込み"]');
           await page.waitForFunction(()=> document.readyState === "complete");  
           myLine.setToken(lineNotifyToken);
-          myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+          myLine.notify("グラスポ " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
         }
         else {
           console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
