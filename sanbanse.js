@@ -54,9 +54,9 @@ const kakoyoyakuList = [];
       await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
-      //await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
       //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
-      await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
       const myLine = new Line();
 
       //空きがあればそのまま予約
