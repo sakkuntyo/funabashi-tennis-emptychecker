@@ -54,9 +54,9 @@ const kakoyoyakuList = [];
       await page.$$eval('td[class="m_akitablelist_tue"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_wed"]',els => els.forEach(el => el.remove()));
       await page.$$eval('td[class="m_akitablelist_thu"]',els => els.forEach(el => el.remove()));
-      await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
+      //await page.$$eval('td[class="m_akitablelist_fri"]',els => els.forEach(el => el.remove()));
       //await page.$$eval('td[class="m_akitablelist_sun"]',els => els.forEach(el => el.remove()));
-      //await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
+      await page.$$eval('td[class="m_akitablelist_sat"]',els => els.forEach(el => el.remove()));
       const myLine = new Line();
 
       //空きがあればそのまま予約
@@ -95,7 +95,11 @@ const kakoyoyakuList = [];
             console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
 	  } else {
             myLine.setToken(lineNotifyToken);
-            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。" + "\n"
+		    + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
+		    + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
+		    + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
+	    );
             kakoyoyakuList.push(akidate + akijikan)
 	  }
         }
@@ -155,7 +159,11 @@ const kakoyoyakuList = [];
               console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
             } else {
               myLine.setToken(lineNotifyToken);
-              myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+              myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。" + "\n"
+  		    + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
+  		    + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
+  		    + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
+              );
               kakoyoyakuList.push(akidate + akijikan)
             }
           }

@@ -95,7 +95,11 @@ const kakoyoyakuList = [];
             console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
 	  } else {
             myLine.setToken(lineNotifyToken);
-            myLine.notify("グラスポ " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+            myLine.notify("グラスポ " + akidate + "の" + akijikan + "取りました。" + "\n"
+        	    + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
+        	    + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
+        	    + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
+            );
             kakoyoyakuList.push(akidate + akijikan)
 	  }
         }
@@ -155,7 +159,11 @@ const kakoyoyakuList = [];
               console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
             } else {
               myLine.setToken(lineNotifyToken);
-              myLine.notify("グラスポ " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+              myLine.notify("グラスポ " + akidate + "の" + akijikan + "取りました。" + "\n"
+		    + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
+		    + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
+		    + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
+              );
               kakoyoyakuList.push(akidate + akijikan)
             }
           }
