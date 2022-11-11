@@ -1,13 +1,12 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const { setTimeout } = require('timers/promises');
-const tabletojson = require('tabletojson').Tabletojson;
-const cheerio = require('cheerio');
 
 //line
 const axios = require('axios');
 const querystring = require('querystring');
 const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).lineNotifyToken;
+const kakoyoyakuList = [];
 
 (async () => {
   while(true){
@@ -76,6 +75,12 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).l
         await page.waitForFunction(()=> document.readyState === "complete");  
         akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
         akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+        if (kakoyoyakuList.includes(akidate + akijikan)){
+          console.log(akidate+akijikan + "は過去に予約してた")
+          await browser.close();
+          await setTimeout(60000);
+          continue;
+	}
         console.log("akijikan -> " + akijikan)
         console.log("akidate -> " + akidate)
         //選択している日にち - 現在の日にちの日数差分
@@ -89,9 +94,9 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).l
           if(await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'申込まれた内容は、他で予約されたため予約できませんでした。\', 0);startInitTimer()"]') !== null || await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'１受付日で申込可能な件数を超えています。\', 0);startInitTimer()"') !== null) {
             console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
 	  } else {
-            await setTimeout(10000);
             myLine.setToken(lineNotifyToken);
             myLine.notify("夏見台運動公園 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+            kakoyoyakuList.push(akidate + akijikan)
 	  }
         }
         else {
@@ -130,6 +135,12 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).l
           await page.waitForFunction(()=> document.readyState === "complete");  
           akidate = (await (await page.$x(`//td[contains(text(),'年')]`))[0].getProperty('innerText')).toString().split(/\r\n|\r|\n/)[0].replace(/.*([0-9]{4}年.*日).*/g,"$1").replace(/[年|月]/g,"/").replace("日","")
           akijikan = (await (await page.$x(`//td[contains(text(),'0分')]`))[0].getProperty('innerText')).toString().replace(/JSHandle:(.*分$)/g,"$1")
+          if (kakoyoyakuList.includes(akidate + akijikan)){
+            console.log(akidate+akijikan + "は過去に予約してた")
+            await browser.close();
+            await setTimeout(60000);
+            continue;
+          }
           console.log("akijikan -> " + akijikan)
           console.log("akidate -> " + akidate)
           //選択している日にち - 現在の日にちの日数差分
@@ -143,9 +154,9 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).l
             if(await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'申込まれた内容は、他で予約されたため予約できませんでした。\', 0);startInitTimer()"]') !== null || await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'１受付日で申込可能な件数を超えています。\', 0);startInitTimer()"') !== null) {
               console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
             } else {
-              await setTimeout(10000);
               myLine.setToken(lineNotifyToken);
               myLine.notify("夏見台運動公園 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+              kakoyoyakuList.push(akidate + akijikan)
             }
           }
           else {
