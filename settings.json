@@ -1,7 +1,5 @@
 {
   "userid":"",
   "password":"",
-  "sanbanseLineNotifyToken":"",
-  "natsumiLineNotifyToken":"",
-  "graspoLineNotifyToken":""
+  "lineNotifyToken": ""
 }

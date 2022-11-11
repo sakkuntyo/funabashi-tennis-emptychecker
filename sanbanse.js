@@ -7,7 +7,7 @@ const cheerio = require('cheerio');
 //line
 const axios = require('axios');
 const querystring = require('querystring');
-const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).sanbanseLineNotifyToken;
+const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).lineNotifyToken;
 
 (async () => {
   while(true){
