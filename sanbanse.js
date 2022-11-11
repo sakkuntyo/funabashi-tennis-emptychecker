@@ -84,9 +84,15 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
         if(dayPeriod >= 4){
           await page.type('input[name="applyNum"]',"4");
           await page.click('img[alt="申込み"]');
-          await page.waitForFunction(()=> document.readyState === "complete");  
-          myLine.setToken(lineNotifyToken);
-          myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+          await page.waitForFunction(()=> document.readyState === "complete");
+          //エラーが出ていないか確認
+          if(await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'申込まれた内容は、他で予約されたため予約できませんでした。\', 0);startInitTimer()"]') !== null || await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'１受付日で申込可能な件数を超えています。\', 0);startInitTimer()"') !== null) {
+            console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
+	  } else {
+            await setTimeout(10000);
+            myLine.setToken(lineNotifyToken);
+            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+	  }
         }
         else {
           console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
@@ -133,9 +139,14 @@ const lineNotifyToken = JSON.parse(fs.readFileSync("./settings.json", "utf8")).s
             await page.type('input[name="applyNum"]',4);
             await page.click('img[alt="申込み"]');
             await page.waitForFunction(()=> document.readyState === "complete");  
-            const myLine = new Line();
-            myLine.setToken(lineNotifyToken);
-            myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+            //エラーが出ていないか確認
+            if(await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'申込まれた内容は、他で予約されたため予約できませんでした。\', 0);startInitTimer()"]') !== null || await page.$('body[onload="javascript:msgHide();javascript:errorMsg(\'１受付日で申込可能な件数を超えています。\', 0);startInitTimer()"') !== null) {
+              console.log("先に予約が取られたかすでに今日の予約枠がいっぱいで取れませんでした。")
+            } else {
+              await setTimeout(10000);
+              myLine.setToken(lineNotifyToken);
+              myLine.notify("三番瀬 " + akidate + "の" + akijikan + "取りました。\n" + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n" + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password);
+            }
           }
           else {
             console.log(akidate + " " + akijikan +"が空いてましたが4日の期間がなかったため予約しませんでした。")
