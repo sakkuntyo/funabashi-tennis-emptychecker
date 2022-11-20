@@ -1,3 +1,8 @@
+//crontabに以下の様に追記して定期通知
+/*
+@reboot root	bash -c "cd /home/noma/funabashi-tenniscourt-checker;node ./funabashi-yoyakulist.js" | tee /tmp/crontablog
+*/
+
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const { setTimeout } = require('timers/promises');
