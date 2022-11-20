@@ -65,7 +65,7 @@ const kakoyoyakuList = [];
       console.log(yoyakulist)
       myLine.setToken(lineNotifyToken);
       message = "船橋の予約状況" + "\n"
-      yoyakulist.forEach(yoyaku => message = message + yoyaku["日付"] + yoyaku["時間"] + yoyaku["コート名"] + yoyaku["コート番号"] + "\n")
+      yoyakulist.forEach(yoyaku => message = message + "- "+ yoyaku["日付"] + " " + yoyaku["時間"] + " " + yoyaku["コート名"] + " " + yoyaku["コート番号"] + "\n")
       message = message + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
       message = message + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
       message = message + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
