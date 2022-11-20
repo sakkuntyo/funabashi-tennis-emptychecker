@@ -64,12 +64,12 @@ const kakoyoyakuList = [];
       }
       console.log(yoyakulist)
       myLine.setToken(lineNotifyToken);
-      myLine.notify("船橋の予約状況" + "\n"
-	    + JSON.stringify(yoyakulist,null,2) + "\n"
-  	    + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
-  	    + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
-  	    + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
-      );
+      message = "船橋の予約状況" + "\n"
+      yoyakulist.forEach(yoyaku => message = message + yoyaku["日付"] + yoyaku["時間"] + yoyaku["コート名"] + yoyaku["コート番号"] + "\n")
+      message = message + "利用者番号:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).userid + "\n"
+      message = message + "パスワード:" + JSON.parse(fs.readFileSync("./settings.json", "utf8")).password + "\n"
+      message = message + "url:" + "https://funayoyaku.city.funabashi.chiba.jp/web"
+      myLine.notify(message);
     
       await browser.close();
       await setTimeout(60000);
